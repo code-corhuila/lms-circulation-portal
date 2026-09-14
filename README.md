@@ -5,6 +5,19 @@
 Part of the **LMS Library** distributed system — team `lms-library`, Grupo 2.
 Governance and documentation live in [`library-docs`](https://github.com/code-corhuila/library-docs).
 
+## Migration scope
+
+**Comes from** `lms-library` → `frontend/src/`pages/loans/{LoansListPage,OverdueLoansPage}.tsx``.
+
+> These screens already exist but **have no backend**: neither `lms-circulation-api` nor the gateway
+> route for `/api/v1/loans` exists yet. Expect to wire them up, not just move them.
+
+Consume the shared HTTP client and session from `lms-front`; do not re-implement them here.
+
+The full map lives in `library-docs`.
+
+---
+
 ## Branching
 
 Three permanent branches. **None of them accepts a direct commit** — you enter through a child
