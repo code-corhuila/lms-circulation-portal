@@ -1,5 +1,5 @@
 // Mirrors the Circulation-relevant subset of
-// library-docs/07-api/contracts/api-contract.md (Circulation section).
+// library-docs/07-api/contracts/openapi/library-api.yaml component schemas.
 
 export interface Loan {
   id: string
