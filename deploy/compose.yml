@@ -1,0 +1,15 @@
+services:
+  circulation-portal:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: circulation-portal
+    restart: unless-stopped
+    ports:
+      - "3003:80"
+    networks:
+      - lms-network
+
+networks:
+  lms-network:
+    external: true
