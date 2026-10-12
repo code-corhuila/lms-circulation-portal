@@ -31,6 +31,8 @@ type ViewState =
 // empty, and data.
 export function OverdueLoansPage() {
   const [view, setView] = useState<ViewState>({ status: 'loading' })
+  const [studentNames, setStudentNames] = useState<Record<string, string>>({})
+  const [bookTitles, setBookTitles] = useState<Record<string, string>>({})
 
   async function load() {
     setView({ status: 'loading' })
@@ -43,8 +45,31 @@ export function OverdueLoansPage() {
     }
   }
 
+  // A Loan only carries studentId/bookId (circulation-service owns neither
+  // Student nor Book) — turns those ids into the name and title an
+  // administrator can actually read.
+  async function loadNames() {
+    try {
+      const { data } = await apiClient.get<Paginated<{ id: string; fullName: string }>>('/students', {
+        params: { limit: 100 },
+      })
+      setStudentNames(Object.fromEntries(data.data.map((s) => [s.id, s.fullName])))
+    } catch {
+      // Falls back to showing the raw id for every row — still usable.
+    }
+    try {
+      const { data } = await apiClient.get<Paginated<{ id: string; title: string }>>('/books', {
+        params: { limit: 100 },
+      })
+      setBookTitles(Object.fromEntries(data.data.map((b) => [b.id, b.title])))
+    } catch {
+      // Falls back to showing the raw id for every row — still usable.
+    }
+  }
+
   useEffect(() => {
     load()
+    loadNames()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -73,22 +98,23 @@ export function OverdueLoansPage() {
       {view.status === 'data' && (
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
+            <thead className="border-b border-slate-200 bg-slate-50/80">
               <tr>
-                <th className="px-4 py-3 font-medium">Student</th>
-                <th className="px-4 py-3 font-medium">Book</th>
-                <th className="px-4 py-3 font-medium">Due date</th>
-                <th className="px-4 py-3 font-medium">Days overdue</th>
+                <th className="px-4 py-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">Student</th>
+                <th className="px-4 py-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">Book</th>
+                <th className="px-4 py-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">Due date</th>
+                <th className="px-4 py-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">Days overdue</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {view.loans.map((l) => (
-                <tr key={l.id}>
-                  <td className="px-4 py-3 text-slate-500">{l.studentId}</td>
-                  <td className="px-4 py-3 text-slate-500">{l.bookId}</td>
-                  <td className="px-4 py-3">{formatDate(l.dueDate)}</td>
-                  <td className="px-4 py-3">
-                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-warning-500">
+                <tr key={l.id} className="transition-colors hover:bg-slate-50/60">
+                  <td className="px-4 py-3 font-medium text-slate-900">{studentNames[l.studentId] ?? l.studentId}</td>
+                  <td className="px-4 py-3 text-slate-500">{bookTitles[l.bookId] ?? l.bookId}</td>
+                  <td className="px-4 py-3 text-slate-500 tabular-nums">{formatDate(l.dueDate)}</td>
+                  <td className="px-4 py-3 tabular-nums">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-warning-500 ring-1 ring-amber-500/10 ring-inset">
+                      <span className="h-1.5 w-1.5 rounded-full bg-warning-500" />
                       {daysOverdue(l.dueDate)} day(s)
                     </span>
                   </td>

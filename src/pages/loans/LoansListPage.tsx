@@ -30,6 +30,8 @@ export function LoansListPage() {
   const [status, setStatus] = useState<'' | 'ACTIVE' | 'RETURNED'>('')
   const [returningId, setReturningId] = useState<string | null>(null)
   const [returnError, setReturnError] = useState<string | null>(null)
+  const [studentNames, setStudentNames] = useState<Record<string, string>>({})
+  const [bookTitles, setBookTitles] = useState<Record<string, string>>({})
 
   // Rules/2-anexos/H-front.md: "Una petición más nueva reemplaza a la anterior".
   const latestRequestId = useRef(0)
@@ -50,8 +52,32 @@ export function LoansListPage() {
     }
   }
 
+  // A Loan only carries studentId/bookId (circulation-service owns neither
+  // Student nor Book) — these two lookups turn those ids into the name and
+  // title an administrator can actually read, same data membership-service
+  // and catalog-service already expose for LoanFormPage's SearchableSelect.
+  async function loadNames() {
+    try {
+      const { data } = await apiClient.get<Paginated<{ id: string; fullName: string }>>('/students', {
+        params: { limit: 100 },
+      })
+      setStudentNames(Object.fromEntries(data.data.map((s) => [s.id, s.fullName])))
+    } catch {
+      // Falls back to showing the raw id for every row — still usable.
+    }
+    try {
+      const { data } = await apiClient.get<Paginated<{ id: string; title: string }>>('/books', {
+        params: { limit: 100 },
+      })
+      setBookTitles(Object.fromEntries(data.data.map((b) => [b.id, b.title])))
+    } catch {
+      // Falls back to showing the raw id for every row — still usable.
+    }
+  }
+
   useEffect(() => {
     load(status)
+    loadNames()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -121,30 +147,34 @@ export function LoansListPage() {
       {view.status === 'data' && (
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
+            <thead className="border-b border-slate-200 bg-slate-50/80">
               <tr>
-                <th className="px-4 py-3 font-medium">Student</th>
-                <th className="px-4 py-3 font-medium">Book</th>
-                <th className="px-4 py-3 font-medium">Loan date</th>
-                <th className="px-4 py-3 font-medium">Due date</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
+                <th className="px-4 py-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">Student</th>
+                <th className="px-4 py-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">Book</th>
+                <th className="px-4 py-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">Loan date</th>
+                <th className="px-4 py-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">Due date</th>
+                <th className="px-4 py-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {view.loans.map((l) => (
-                <tr key={l.id}>
-                  <td className="px-4 py-3 text-slate-500">{l.studentId}</td>
-                  <td className="px-4 py-3 text-slate-500">{l.bookId}</td>
-                  <td className="px-4 py-3">{formatDate(l.loanDate)}</td>
-                  <td className="px-4 py-3">{formatDate(l.dueDate)}</td>
+                <tr key={l.id} className="transition-colors hover:bg-slate-50/60">
+                  <td className="px-4 py-3 font-medium text-slate-900">{studentNames[l.studentId] ?? l.studentId}</td>
+                  <td className="px-4 py-3 text-slate-500">{bookTitles[l.bookId] ?? l.bookId}</td>
+                  <td className="px-4 py-3 text-slate-500 tabular-nums">{formatDate(l.loanDate)}</td>
+                  <td className="px-4 py-3 tabular-nums">{formatDate(l.dueDate)}</td>
                   <td className="px-4 py-3">
                     {l.status === 'RETURNED' ? (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-slate-500/10 ring-inset">
+                        <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
                         Returned{l.wasLate ? ' (late)' : ''}
                       </span>
                     ) : (
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-success-600">Active</span>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-success-600 ring-1 ring-emerald-600/10 ring-inset">
+                        <span className="h-1.5 w-1.5 rounded-full bg-success-500" />
+                        Active
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-3">
