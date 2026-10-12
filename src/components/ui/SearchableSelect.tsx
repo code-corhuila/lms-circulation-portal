@@ -115,7 +115,28 @@ export function SearchableSelect({
       <input type="hidden" value={value} readOnly />
 
       {isOpen && query.trim().length > 0 && (
-        <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg">
+        // Layout-critical properties (position/z-index/sizing/overflow) are
+        // inline, not Tailwind classes: this component gets loaded inside
+        // lms-front's shell via Module Federation, and the shell's own
+        // Tailwind build only generates CSS for classes it finds in ITS OWN
+        // source — a class used only here (not shared with the shell) never
+        // makes it into the compiled stylesheet the remote actually runs
+        // under, so `absolute`/`z-20`/`max-h-60` silently did nothing and
+        // this dropdown painted underneath the next field in the form
+        // instead of over it. Inline styles always apply regardless of
+        // which build produced the page.
+        <div
+          style={{
+            position: 'absolute',
+            zIndex: 20,
+            marginTop: 4,
+            maxHeight: '15rem',
+            width: '100%',
+            overflowY: 'auto',
+            boxShadow: 'var(--shadow-card-hover)',
+          }}
+          className="rounded-lg border border-slate-200 bg-white py-1 text-sm"
+        >
           {isLoading && <p className="px-3 py-2 text-slate-400">Searching…</p>}
           {!isLoading && options.length === 0 && (
             <p className="px-3 py-2 text-slate-400">No matches</p>
